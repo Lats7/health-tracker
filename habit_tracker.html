@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <title>Daily Practice</title>
+  <meta name="description" content="Daily habit tracker" />
+
+  <!-- iOS home screen / PWA support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Practice" />
+  <meta name="theme-color" content="#0f0e0c" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Inline SVG icon as data URI so no external icon file needed -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%230f0e0c'/><text x='50%' y='58%' text-anchor='middle' font-family='Georgia, serif' font-size='90' font-style='italic' fill='%23c8643c' font-weight='500'>P</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%230f0e0c'/><text x='50%' y='58%' text-anchor='middle' font-family='Georgia, serif' font-size='90' font-style='italic' fill='%23c8643c' font-weight='500'>P</text></svg>" />
+</head>
+<body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0f0e0c;
+    --bg-elev: #1a1816;
+    --bg-elev-2: #232017;
+    --line: #2d2925;
+    --line-soft: #221f1c;
+    --ink: #f4ede0;
+    --ink-dim: #a89e8c;
+    --ink-faint: #6b6253;
+    --accent: #c8643c;
+    --accent-soft: #8a4527;
+    --accent-glow: rgba(200, 100, 60, 0.15);
+    --done: #7a8a4a;
+    --done-glow: rgba(122, 138, 74, 0.18);
+    --display: 'Fraunces', Georgia, serif;
+    --body: 'Inter Tight', -apple-system, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg); }
+
+  body {
+    font-family: var(--body);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+    background:
+      radial-gradient(ellipse at top, #1a1612 0%, var(--bg) 60%),
+      var(--bg);
+    background-attachment: fixed;
+    overscroll-behavior-y: contain;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 120px 0;
+    position: relative;
+  }
+
+  /* ---------- Header ---------- */
+  .header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--line-soft);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(15, 14, 12, 0.85);
+  }
+
+  .eyebrow {
+    font-family: var(--body);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .title {
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--ink);
+    font-variation-settings: "opsz" 144;
+  }
+
+  .title em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  .week-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 14px;
+    gap: 12px;
+  }
+
+  .week-date {
+    font-size: 12px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+  }
+
+  .week-pct {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 600;
+    font-variation-settings: "opsz" 144;
+    color: var(--ink);
+  }
+
+  .week-pct .num {
+    font-feature-settings: "tnum";
+  }
+
+  /* ---------- Day tabs ---------- */
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    padding: 14px 16px 0;
+    border-bottom: 1px solid var(--line-soft);
+    background: rgba(15, 14, 12, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: sticky;
+    top: 119px;
+    z-index: 49;
+  }
+
+  .tab {
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    padding: 10px 4px 14px;
+    font-family: var(--body);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    position: relative;
+    transition: color 180ms ease;
+    text-align: center;
+  }
+
+  .tab .day-letter {
+    display: block;
+    font-family: var(--display);
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 2px;
+    font-variation-settings: "opsz" 144;
+  }
+
+  .tab .day-pct {
+    font-size: 10px;
+    color: var(--ink-faint);
+    font-variation-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  .tab.active {
+    color: var(--ink);
+  }
+  .tab.active .day-pct { color: var(--accent); }
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .tab.complete .day-letter { color: var(--done); }
+
+  /* ---------- Day content ---------- */
+  .day-content {
+    padding: 24px 24px 0;
+    animation: fadeIn 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .day-headline {
+    margin-bottom: 18px;
+  }
+
+  .day-name {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-variation-settings: "opsz" 144;
+  }
+
+  .day-progress {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    font-variation-numeric: tabular-nums;
+  }
+
+  /* ---------- Weight card ---------- */
+  .weight-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .weight-label {
+    font-size: 13px;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+  .weight-input-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .weight-input {
+    background: none;
+    border: none;
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 500;
+    width: 80px;
+    text-align: right;
+    font-variation-numeric: tabular-nums;
+    font-variation-settings: "opsz" 144;
+    padding: 0;
+    outline: none;
+  }
+  .weight-input::placeholder {
+    color: var(--ink-faint);
+    opacity: 0.5;
+  }
+  .weight-unit {
+    color: var(--ink-faint);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* ---------- Habit list ---------- */
+  .habits {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .habit {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .habit:active {
+    transform: scale(0.985);
+    background: var(--bg-elev-2);
+  }
+
+  .habit-check {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1.5px solid var(--line);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+  }
+
+  .habit-check svg {
+    width: 14px;
+    height: 14px;
+    stroke: var(--bg);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .habit-label {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+    transition: color 200ms ease;
+  }
+
+  .habit.done {
+    background: linear-gradient(135deg, rgba(122, 138, 74, 0.12) 0%, rgba(122, 138, 74, 0.04) 100%);
+    border-color: rgba(122, 138, 74, 0.35);
+  }
+  .habit.done .habit-check {
+    background: var(--done);
+    border-color: var(--done);
+  }
+  .habit.done .habit-check svg {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .habit.done .habit-label {
+    color: var(--ink-dim);
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-faint);
+    text-decoration-thickness: 1px;
+  }
+
+  /* Sparkle on tick */
+  .habit::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--done-glow) 0%, transparent 50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 600ms ease;
+  }
+  .habit.just-ticked::after {
+    opacity: 1;
+    animation: pulse 600ms ease-out;
+  }
+  @keyframes pulse {
+    0% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.2); }
+  }
+
+  /* ---------- Notes ---------- */
+  .notes-section {
+    margin-top: 24px;
+  }
+  .notes-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .notes-input {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 70px;
+    outline: none;
+    transition: border-color 180ms ease;
+  }
+  .notes-input:focus {
+    border-color: var(--accent-soft);
+  }
+  .notes-input::placeholder {
+    color: var(--ink-faint);
+    opacity: 0.6;
+    font-style: italic;
+  }
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(15, 14, 12, 0.98) 60%, rgba(15, 14, 12, 0));
+    z-index: 60;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .bottom-bar > * { pointer-events: auto; }
+
+  .icon-btn {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-family: var(--body);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 180ms ease;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .icon-btn:active { transform: scale(0.96); }
+  .icon-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+  .icon-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1a1206;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 24px;
+    animation: backdropIn 200ms ease;
+  }
+  .modal-backdrop.show { display: flex; }
+  @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 380px;
+    width: 100%;
+    animation: modalIn 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+  .modal h2 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 22px;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 144;
+  }
+  .modal p {
+    color: var(--ink-dim);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 12px; border-radius: 12px; font-family: var(--body); font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid var(--line); background: var(--bg-elev-2); color: var(--ink); transition: all 180ms ease; }
+  .modal-actions button:active { transform: scale(0.97); }
+  .modal-actions button.danger { background: var(--accent); border-color: var(--accent); color: #1a1206; }
+
+  /* ---------- History view ---------- */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .history-row {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .history-date {
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 500;
+    font-variation-settings: "opsz" 144;
+  }
+  .history-pct {
+    font-feature-settings: "tnum";
+    font-size: 14px;
+    color: var(--ink-dim);
+    font-weight: 500;
+  }
+  .history-pct.high { color: var(--done); }
+  .history-pct.mid { color: var(--accent); }
+  .history-pct.low { color: var(--ink-faint); }
+
+  .history-empty {
+    color: var(--ink-faint);
+    font-style: italic;
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .back-btn {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    padding: 6px 0;
+    font-family: var(--body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .back-btn:active { color: var(--ink); }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--bg-elev-2);
+    color: var(--ink);
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--line);
+    z-index: 200;
+    opacity: 0;
+    transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .loading {
+    padding: 60px 24px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-style: italic;
+    font-size: 14px;
+  }
+</style>
+
+<div class="app" id="app">
+  <div class="loading">Loading your week…</div>
+</div>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h2 id="modal-title">Reset week?</h2>
+    <p id="modal-body">This will archive your current week to history and clear all checkboxes for a fresh start.</p>
+    <div class="modal-actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="danger" id="modal-confirm">Reset week</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============== DATA ==============
+  const HABITS = {
+    Monday: ['Cold shower','Cream applications','Green tea','Creatine 5g','Protein shake','Magnesium','4L water','Bone broth','Fish oil','Apple cider vinegar','700 calories burnt','10,000 steps','Gym — Push day','Journalling','Reading 30 minutes'],
+    Tuesday: ['Cold shower','Gym','Protein shake','Cream applications','Green tea','Creatine 5g','Magnesium','4L water','Bone broth','Fish oil','Apple cider vinegar','700 calories burnt','15,000 steps','Gym — Push day','Journalling','Reading 30 minutes','2hr with Tomas — activity & switch off','30min with Nives — discussion'],
+    Wednesday: ['Gym — Upper Pull','Protein shake','Cream applications','Green tea','Creatine 5g','Magnesium','4L water','Bone broth','Fish oil','Apple cider vinegar','700 calories burnt','10,000 steps','Journalling','Reading 30 minutes'],
+    Thursday: ['Swim 45min + Sauna 15min','Cream applications','Protein shake','Green tea','Creatine 5g','Magnesium','4L water','Bone broth','Fish oil','Apple cider vinegar','700 calories burnt','10,000 steps','Journalling','Reading 30 minutes'],
+    Friday: ['Gym — Legs','Protein shake','Cream applications','Green tea','Creatine 5g','Magnesium','4L water','Bone broth','Fish oil','Apple cider vinegar','700 calories burnt','10,000 steps','Journalling','Reading 30 minutes'],
+  };
+  const DAYS = Object.keys(HABITS);
+  const DAY_LETTERS = ['M','T','W','T','F'];
+
+  let state = {
+    weekStart: null,
+    currentDay: null,
+    week: {},
+    view: 'tracker', // 'tracker' or 'history'
+  };
+
+  // ============== STORAGE ==============
+  function loadState() {
+    try {
+      const raw = localStorage.getItem('habit_current_week');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state.weekStart = parsed.weekStart;
+        state.week = parsed.week || {};
+      }
+    } catch (e) {
+      // No saved state yet — that's fine
+    }
+    if (!state.weekStart) {
+      state.weekStart = getMondayISO(new Date());
+      initWeek();
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem('habit_current_week', JSON.stringify({
+        weekStart: state.weekStart,
+        week: state.week,
+      }));
+    } catch (e) {
+      console.error('Save failed', e);
+    }
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem('habit_history');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+  }
+
+  function saveHistory(history) {
+    try {
+      localStorage.setItem('habit_history', JSON.stringify(history));
+    } catch (e) { console.error(e); }
+  }
+
+  function initWeek() {
+    state.week = {};
+    DAYS.forEach(day => {
+      state.week[day] = {
+        ticks: {},
+        weight: '',
+        notes: '',
+      };
+    });
+  }
+
+  // ============== DATE HELPERS ==============
+  function getMondayISO(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date.toISOString().slice(0,10);
+  }
+  function getFridayFromMonday(monISO) {
+    const d = new Date(monISO);
+    d.setDate(d.getDate() + 4);
+    return d;
+  }
+  function fmtDate(d) {
+    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  }
+  function fmtFullDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function todayDayName() {
+    const d = new Date().getDay();
+    return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d];
+  }
+
+  // ============== CALCULATIONS ==============
+  function dayPct(dayName) {
+    const habits = HABITS[dayName];
+    const ticks = state.week[dayName]?.ticks || {};
+    const done = habits.filter(h => ticks[h]).length;
+    return habits.length === 0 ? 0 : done / habits.length;
+  }
+  function weekPct() {
+    let totalDone = 0, total = 0;
+    DAYS.forEach(d => {
+      total += HABITS[d].length;
+      const ticks = state.week[d]?.ticks || {};
+      totalDone += HABITS[d].filter(h => ticks[h]).length;
+    });
+    return total === 0 ? 0 : totalDone / total;
+  }
+
+  // ============== RENDERING ==============
+  function render() {
+    const app = document.getElementById('app');
+    if (state.view === 'history') {
+      renderHistory(app);
+    } else {
+      renderTracker(app);
+    }
+  }
+
+  function renderTracker(app) {
+    const monISO = state.weekStart;
+    const friDate = getFridayFromMonday(monISO);
+    const monDate = new Date(monISO);
+    const wPct = Math.round(weekPct() * 100);
+
+    app.innerHTML = `
+      <header class="header">
+        <div class="eyebrow">Daily Practice</div>
+        <h1 class="title">This <em>week</em></h1>
+        <div class="week-meta">
+          <div class="week-date">${fmtDate(monDate)} — ${fmtDate(friDate)}</div>
+          <div class="week-pct"><span class="num">${wPct}</span>%</div>
+        </div>
+      </header>
+
+      <nav class="tabs">
+        ${DAYS.map((d, i) => {
+          const pct = Math.round(dayPct(d) * 100);
+          const isComplete = pct === 100;
+          const isActive = d === state.currentDay;
+          return `
+            <button class="tab ${isActive ? 'active' : ''} ${isComplete ? 'complete' : ''}" onclick="selectDay('${d}')">
+              <span class="day-letter">${DAY_LETTERS[i]}</span>
+              <span class="day-pct">${pct}%</span>
+            </button>`;
+        }).join('')}
+      </nav>
+
+      <div class="day-content" id="day-content">
+        ${renderDay(state.currentDay)}
+      </div>
+
+      <div class="bottom-bar">
+        <button class="icon-btn" onclick="showHistory()">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+          History
+        </button>
+        <button class="icon-btn primary" onclick="confirmReset()">
+          <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+          Reset Week
+        </button>
+      </div>
+    `;
+  }
+
+  function renderDay(dayName) {
+    if (!dayName) return '';
+    const habits = HABITS[dayName];
+    const data = state.week[dayName] || { ticks:{}, weight:'', notes:'' };
+    const done = habits.filter(h => data.ticks[h]).length;
+
+    return `
+      <div class="day-headline">
+        <div class="day-name">${dayName}</div>
+        <div class="day-progress">${done} of ${habits.length} complete</div>
+      </div>
+
+      <div class="weight-card">
+        <div class="weight-label">Morning weight</div>
+        <div class="weight-input-wrap">
+          <input
+            class="weight-input"
+            type="number"
+            inputmode="decimal"
+            step="0.1"
+            placeholder="—"
+            value="${data.weight}"
+            oninput="updateWeight('${dayName}', this.value)"
+            onblur="saveState()"
+          />
+          <span class="weight-unit">kg</span>
+        </div>
+      </div>
+
+      <div class="habits">
+        ${habits.map((h, idx) => {
+          const isDone = !!data.ticks[h];
+          return `
+            <div class="habit ${isDone ? 'done' : ''}" onclick="toggleHabit(event, '${dayName}', ${idx})">
+              <div class="habit-check">
+                <svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
+              </div>
+              <div class="habit-label">${h}</div>
+            </div>`;
+        }).join('')}
+      </div>
+
+      <div class="notes-section">
+        <div class="notes-label">Notes</div>
+        <textarea
+          class="notes-input"
+          placeholder="Wins, lessons, anything worth remembering…"
+          oninput="updateNotes('${dayName}', this.value)"
+          onblur="saveState()"
+        >${data.notes}</textarea>
+      </div>
+    `;
+  }
+
+  function renderHistory(app) {
+    const history = loadHistory();
+    app.innerHTML = `
+      <header class="header">
+        <button class="back-btn" onclick="showTracker()">← Back to this week</button>
+        <div class="eyebrow">Archive</div>
+        <h1 class="title">Past <em>weeks</em></h1>
+      </header>
+      <div class="day-content">
+        ${history.length === 0
+          ? `<div class="history-empty">No history yet.<br/>Your archived weeks will appear here once you've reset.</div>`
+          : `<div class="history-list">${history.slice().reverse().map(h => {
+              const pct = Math.round(h.weekPct * 100);
+              const cls = pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low';
+              return `<div class="history-row">
+                <div class="history-date">Week of ${fmtFullDate(h.weekStart)}</div>
+                <div class="history-pct ${cls}">${pct}%</div>
+              </div>`;
+            }).join('')}</div>`
+        }
+      </div>
+    `;
+  }
+
+  // ============== INTERACTIONS ==============
+  function selectDay(d) {
+    state.currentDay = d;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab')[DAYS.indexOf(d)].classList.add('active');
+    document.getElementById('day-content').innerHTML = renderDay(d);
+  }
+
+  function toggleHabit(evt, dayName, idx) {
+    const habit = HABITS[dayName][idx];
+    if (!state.week[dayName]) state.week[dayName] = { ticks:{}, weight:'', notes:'' };
+    state.week[dayName].ticks[habit] = !state.week[dayName].ticks[habit];
+
+    // Tactile feedback
+    const el = evt.currentTarget;
+    el.classList.toggle('done');
+    if (state.week[dayName].ticks[habit]) {
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty('--x', `${evt.clientX - rect.left}px`);
+      el.style.setProperty('--y', `${evt.clientY - rect.top}px`);
+      el.classList.add('just-ticked');
+      setTimeout(() => el.classList.remove('just-ticked'), 600);
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    // Update local progress numbers without full re-render
+    const done = HABITS[dayName].filter(h => state.week[dayName].ticks[h]).length;
+    const progEl = document.querySelector('.day-progress');
+    if (progEl) progEl.textContent = `${done} of ${HABITS[dayName].length} complete`;
+
+    // Update tab pct
+    const tab = document.querySelectorAll('.tab')[DAYS.indexOf(dayName)];
+    const pct = Math.round(dayPct(dayName) * 100);
+    tab.querySelector('.day-pct').textContent = `${pct}%`;
+    tab.classList.toggle('complete', pct === 100);
+
+    // Update week pct
+    const wPctEl = document.querySelector('.week-pct .num');
+    if (wPctEl) wPctEl.textContent = Math.round(weekPct() * 100);
+
+    saveState();
+  }
+
+  function updateWeight(dayName, v) {
+    if (!state.week[dayName]) state.week[dayName] = { ticks:{}, weight:'', notes:'' };
+    state.week[dayName].weight = v;
+  }
+  function updateNotes(dayName, v) {
+    if (!state.week[dayName]) state.week[dayName] = { ticks:{}, weight:'', notes:'' };
+    state.week[dayName].notes = v;
+  }
+
+  function showHistory() { state.view = 'history'; render(); }
+  function showTracker() { state.view = 'tracker'; render(); }
+
+  function confirmReset() {
+    document.getElementById('modal-title').textContent = 'Reset week?';
+    document.getElementById('modal-body').textContent = 'This will archive your current week to history and clear all checkboxes for a fresh start.';
+    document.getElementById('modal-confirm').textContent = 'Reset week';
+    document.getElementById('modal-confirm').onclick = doReset;
+    document.getElementById('modal').classList.add('show');
+  }
+  function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+  function doReset() {
+    closeModal();
+    // Archive current week
+    const history = loadHistory();
+    history.push({
+      weekStart: state.weekStart,
+      weekPct: weekPct(),
+      days: state.week,
+      archivedAt: new Date().toISOString(),
+    });
+    saveHistory(history);
+
+    // Start a new week (next Monday)
+    const next = new Date(state.weekStart);
+    next.setDate(next.getDate() + 7);
+    state.weekStart = next.toISOString().slice(0,10);
+    initWeek();
+    state.currentDay = todayDayName() in HABITS ? todayDayName() : 'Monday';
+    saveState();
+
+    showToast('Week archived ✓');
+    render();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  // ============== INIT ==============
+  (function() {
+    loadState();
+    state.currentDay = todayDayName() in HABITS ? todayDayName() : 'Monday';
+    render();
+  })();
+</script>
+
+</body>
+</html>
